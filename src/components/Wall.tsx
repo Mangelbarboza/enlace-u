@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import {
   Flag,
   Heart,
@@ -38,6 +38,7 @@ type Post = {
   created_at: string
   is_anonymous: boolean
   tags: string[]
+  post_scope: 'general' | 'university'
   likes_count: number
   liked_by_me: boolean
   comments: PostComment[]
@@ -83,6 +84,8 @@ export default function Wall({ mode }: WallProps) {
   const [tagsInput, setTagsInput] = useState('')
   const [tagSearch, setTagSearch] = useState('')
   const [isAnonymous, setIsAnonymous] = useState(false)
+  const [isComposerOpen, setIsComposerOpen] = useState(false)
+
   const [loadingPosts, setLoadingPosts] = useState(true)
   const [publishing, setPublishing] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -116,13 +119,17 @@ export default function Wall({ mode }: WallProps) {
     let query = supabase
       .from('posts')
       .select(
-        'id, user_id, author_name, university, province, content, created_at, is_anonymous, tags',
+        'id, user_id, author_name, university, province, content, created_at, is_anonymous, tags, post_scope',
       )
       .order('created_at', { ascending: false })
       .limit(100)
 
-    if (mode === 'university' && university) {
-      query = query.eq('university', university)
+    if (mode === 'general') {
+      query = query.eq('post_scope', 'general')
+    }
+
+    if (mode === 'university') {
+      query = query.eq('post_scope', 'university').eq('university', university || '')
     }
 
     const { data, error } = await query
@@ -142,10 +149,7 @@ export default function Wall({ mode }: WallProps) {
       return
     }
 
-    const [
-      postLikesResult,
-      commentsResult,
-    ] = await Promise.all([
+    const [postLikesResult, commentsResult] = await Promise.all([
       supabase.from('post_likes').select('post_id, user_id').in('post_id', postIds),
       supabase
         .from('post_comments')
@@ -261,6 +265,7 @@ export default function Wall({ mode }: WallProps) {
       content: cleanContent,
       is_anonymous: isAnonymous,
       tags: cleanTags,
+      post_scope: mode,
     })
 
     setPublishing(false)
@@ -273,6 +278,7 @@ export default function Wall({ mode }: WallProps) {
     setContent('')
     setTagsInput('')
     setIsAnonymous(false)
+    setIsComposerOpen(false)
     await loadPosts()
   }
 
@@ -437,11 +443,12 @@ export default function Wall({ mode }: WallProps) {
           value={tagSearch}
           onChange={(event) => setTagSearch(event.target.value)}
           className="w-full bg-transparent text-sm outline-none"
-          placeholder="Buscar hashtag: TEC, tutorias, ucr..."
+          placeholder="Buscar hashtag"
         />
 
         {tagSearch && (
           <button
+            type="button"
             onClick={() => setTagSearch('')}
             className="rounded-xl p-1 text-slate-400 hover:bg-slate-100"
           >
@@ -450,77 +457,100 @@ export default function Wall({ mode }: WallProps) {
         )}
       </div>
 
-      <form
-        onSubmit={handleCreatePost}
-        className="mt-5 rounded-3xl border bg-white p-5 shadow-sm"
-      >
-        <div className="mb-3 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-sm font-black text-white">
-            {isAnonymous ? '?' : displayName.charAt(0).toUpperCase()}
-          </div>
+      <section className="mt-5 rounded-3xl border bg-white p-5 shadow-sm">
+        {!isComposerOpen ? (
+          <button
+            type="button"
+            onClick={() => setIsComposerOpen(true)}
+            className="flex w-full items-center justify-between rounded-2xl bg-slate-50 px-4 py-4 text-left text-sm font-bold text-slate-700 hover:bg-slate-100"
+          >
+            <span>Crear nueva publicación</span>
+            <span className="text-xl leading-none">+</span>
+          </button>
+        ) : (
+          <form onSubmit={handleCreatePost}>
+            <div className="mb-3 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-sm font-black text-white">
+                {isAnonymous ? '?' : displayName.charAt(0).toUpperCase()}
+              </div>
 
-          <div>
-            <p className="text-sm font-bold text-slate-900">
-              {isAnonymous ? 'Publicar como anónimo' : displayName}
-            </p>
-            <p className="text-xs text-slate-500">
-              {isAnonymous
-                ? 'Tu nombre no se mostrará públicamente'
-                : `${university || 'Universidad'} ${province ? `• ${province}` : ''}`}
-            </p>
-          </div>
-        </div>
+              <div>
+                <p className="text-sm font-bold text-slate-900">
+                  {isAnonymous ? 'Publicar como anónimo' : displayName}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {isAnonymous
+                    ? 'Tu nombre no se mostrará públicamente'
+                    : `${university || 'Universidad'} ${province ? `• ${province}` : ''}`}
+                </p>
+              </div>
+            </div>
 
-        <textarea
-          value={content}
-          onChange={(event) => setContent(event.target.value)}
-          maxLength={500}
-          className="min-h-28 w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-500"
-          placeholder="¿Qué querés compartir hoy?"
-        />
-
-        <input
-          value={tagsInput}
-          onChange={(event) => setTagsInput(event.target.value)}
-          className="mt-3 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-500"
-          placeholder="Hashtags separados por espacios: TEC tutorias calculo"
-        />
-
-        <div className="mt-2 flex flex-wrap gap-2">
-          {normalizeTags(tagsInput).map((tag) => (
-            <span
-              key={tag}
-              className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600"
-            >
-              #{tag}
-            </span>
-          ))}
-        </div>
-
-        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
-            <input
-              type="checkbox"
-              checked={isAnonymous}
-              onChange={(event) => setIsAnonymous(event.target.checked)}
-              className="h-4 w-4"
+            <textarea
+              value={content}
+              onChange={(event) => setContent(event.target.value)}
+              maxLength={500}
+              className="min-h-28 w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-500"
+              placeholder="Escribí tu publicación"
             />
-            Publicar anónimo
-          </label>
 
-          <div className="flex items-center justify-between gap-3 sm:justify-end">
-            <p className="text-xs text-slate-400">{content.length}/500</p>
+            <input
+              value={tagsInput}
+              onChange={(event) => setTagsInput(event.target.value)}
+              className="mt-3 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-500"
+              placeholder="Hashtags"
+            />
 
-            <button
-              type="submit"
-              disabled={publishing}
-              className="rounded-2xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {publishing ? 'Publicando...' : 'Publicar'}
-            </button>
-          </div>
-        </div>
-      </form>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {normalizeTags(tagsInput).map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={isAnonymous}
+                  onChange={(event) => setIsAnonymous(event.target.checked)}
+                  className="h-4 w-4"
+                />
+                Publicar anónimo
+              </label>
+
+              <div className="flex items-center justify-between gap-3 sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsComposerOpen(false)
+                    setContent('')
+                    setTagsInput('')
+                    setIsAnonymous(false)
+                  }}
+                  className="rounded-2xl bg-slate-100 px-5 py-2.5 text-sm font-bold text-slate-700"
+                >
+                  Cancelar
+                </button>
+
+                <p className="text-xs text-slate-400">{content.length}/500</p>
+
+                <button
+                  type="submit"
+                  disabled={publishing}
+                  className="rounded-2xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {publishing ? 'Publicando...' : 'Publicar'}
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
+      </section>
 
       {errorMessage && (
         <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -582,7 +612,7 @@ export default function Wall({ mode }: WallProps) {
                     </p>
                     <p className="text-xs text-slate-500">
                       {post.is_anonymous
-                        ? `Muro general • ${formatPostDate(post.created_at)}`
+                        ? `${mode === 'general' ? 'Muro general' : 'Muro U'} • ${formatPostDate(post.created_at)}`
                         : `${post.university || 'Universidad'} ${
                             post.province ? `• ${post.province}` : ''
                           } • ${formatPostDate(post.created_at)}`}
@@ -608,6 +638,7 @@ export default function Wall({ mode }: WallProps) {
                   {post.tags.map((tag) => (
                     <button
                       key={tag}
+                      type="button"
                       onClick={() => setTagSearch(tag)}
                       className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600"
                     >
@@ -626,7 +657,10 @@ export default function Wall({ mode }: WallProps) {
                     post.liked_by_me ? 'text-red-500' : 'text-slate-500',
                   ].join(' ')}
                 >
-                  <Heart size={17} fill={post.liked_by_me ? 'currentColor' : 'none'} />
+                  <Heart
+                    size={17}
+                    fill={post.liked_by_me ? 'currentColor' : 'none'}
+                  />
                   {post.likes_count}
                 </button>
 
@@ -637,6 +671,7 @@ export default function Wall({ mode }: WallProps) {
 
                 {isOwnPost && (
                   <button
+                    type="button"
                     onClick={() => handleDeletePost(post.id)}
                     className="ml-auto flex items-center gap-1 text-slate-400 hover:text-red-500"
                   >
@@ -652,9 +687,11 @@ export default function Wall({ mode }: WallProps) {
                     <p className="text-xs font-bold text-slate-900">
                       {comment.author_name}
                     </p>
+
                     <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">
                       {comment.content}
                     </p>
+
                     <button
                       type="button"
                       onClick={() => handleToggleCommentLike(comment)}
@@ -704,8 +741,11 @@ export default function Wall({ mode }: WallProps) {
         <div className="fixed inset-0 z-50 flex items-end bg-black/30 p-4 sm:items-center sm:justify-center">
           <div className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-xl">
             <p className="text-sm font-black text-slate-900">
-              {selectedPost.is_anonymous ? 'Publicación anónima' : selectedPost.author_name}
+              {selectedPost.is_anonymous
+                ? 'Publicación anónima'
+                : selectedPost.author_name}
             </p>
+
             <p className="mt-1 text-xs text-slate-500">
               Elegí una acción para esta publicación.
             </p>
@@ -713,6 +753,7 @@ export default function Wall({ mode }: WallProps) {
             <div className="mt-4 space-y-2">
               {!selectedPost.is_anonymous && selectedPost.user_id !== user?.id && (
                 <button
+                  type="button"
                   onClick={() => handleStartDirectMessage(selectedPost)}
                   className="flex w-full items-center gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white"
                 >
@@ -722,6 +763,7 @@ export default function Wall({ mode }: WallProps) {
               )}
 
               <button
+                type="button"
                 onClick={() => handleReportPost(selectedPost)}
                 className="flex w-full items-center gap-3 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600"
               >
@@ -730,6 +772,7 @@ export default function Wall({ mode }: WallProps) {
               </button>
 
               <button
+                type="button"
                 onClick={() => setSelectedPost(null)}
                 className="w-full rounded-2xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700"
               >
