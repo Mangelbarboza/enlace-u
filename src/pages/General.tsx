@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import type { FormEvent } from 'react'
+import { type FormEvent, useEffect, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -12,6 +11,7 @@ type Post = {
   campus: string | null
   content: string
   created_at: string
+  is_anonymous: boolean
 }
 
 function formatPostDate(value: string) {
@@ -29,6 +29,7 @@ export default function General() {
 
   const [posts, setPosts] = useState<Post[]>([])
   const [content, setContent] = useState('')
+  const [isAnonymous, setIsAnonymous] = useState(false)
   const [loadingPosts, setLoadingPosts] = useState(true)
   const [publishing, setPublishing] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -43,7 +44,9 @@ export default function General() {
 
     const { data, error } = await supabase
       .from('posts')
-      .select('id, user_id, author_name, university, campus, content, created_at')
+      .select(
+        'id, user_id, author_name, university, campus, content, created_at, is_anonymous',
+      )
       .order('created_at', { ascending: false })
       .limit(50)
 
@@ -90,6 +93,7 @@ export default function General() {
       university,
       campus,
       content: cleanContent,
+      is_anonymous: isAnonymous,
     })
 
     setPublishing(false)
@@ -100,6 +104,7 @@ export default function General() {
     }
 
     setContent('')
+    setIsAnonymous(false)
     await loadPosts()
   }
 
@@ -137,13 +142,17 @@ export default function General() {
       >
         <div className="mb-3 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-sm font-black text-white">
-            {displayName.charAt(0).toUpperCase()}
+            {isAnonymous ? '?' : displayName.charAt(0).toUpperCase()}
           </div>
 
           <div>
-            <p className="text-sm font-bold text-slate-900">{displayName}</p>
+            <p className="text-sm font-bold text-slate-900">
+              {isAnonymous ? 'Publicar como anónimo' : displayName}
+            </p>
             <p className="text-xs text-slate-500">
-              {university || 'Universidad'} {campus ? `• ${campus}` : ''}
+              {isAnonymous
+                ? 'Tu nombre no se mostrará públicamente'
+                : `${university || 'Universidad'} ${campus ? `• ${campus}` : ''}`}
             </p>
           </div>
         </div>
@@ -156,16 +165,28 @@ export default function General() {
           placeholder="¿Qué querés compartir hoy?"
         />
 
-        <div className="mt-3 flex items-center justify-between gap-3">
-          <p className="text-xs text-slate-400">{content.length}/500</p>
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+            <input
+              type="checkbox"
+              checked={isAnonymous}
+              onChange={(event) => setIsAnonymous(event.target.checked)}
+              className="h-4 w-4"
+            />
+            Publicar anónimo
+          </label>
 
-          <button
-            type="submit"
-            disabled={publishing}
-            className="rounded-2xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {publishing ? 'Publicando...' : 'Publicar'}
-          </button>
+          <div className="flex items-center justify-between gap-3 sm:justify-end">
+            <p className="text-xs text-slate-400">{content.length}/500</p>
+
+            <button
+              type="submit"
+              disabled={publishing}
+              className="rounded-2xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {publishing ? 'Publicando...' : 'Publicar'}
+            </button>
+          </div>
         </div>
       </form>
 
@@ -190,6 +211,10 @@ export default function General() {
 
         {posts.map((post) => {
           const isOwnPost = post.user_id === user?.id
+          const visibleName = post.is_anonymous ? 'Anónimo' : post.author_name
+          const visibleInitial = post.is_anonymous
+            ? '?'
+            : post.author_name.charAt(0).toUpperCase()
 
           return (
             <article
@@ -198,18 +223,28 @@ export default function General() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-200 text-sm font-black text-slate-700">
-                    {post.author_name.charAt(0).toUpperCase()}
+                  <div
+                    className={[
+                      'flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-black',
+                      post.is_anonymous
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-slate-200 text-slate-700',
+                    ].join(' ')}
+                  >
+                    {visibleInitial}
                   </div>
 
                   <div>
                     <p className="text-sm font-bold text-slate-900">
-                      {post.author_name}
+                      {visibleName}
                     </p>
+
                     <p className="text-xs text-slate-500">
-                      {post.university || 'Universidad'}{' '}
-                      {post.campus ? `• ${post.campus}` : ''} •{' '}
-                      {formatPostDate(post.created_at)}
+                      {post.is_anonymous
+                        ? `Muro general • ${formatPostDate(post.created_at)}`
+                        : `${post.university || 'Universidad'} ${
+                            post.campus ? `• ${post.campus}` : ''
+                          } • ${formatPostDate(post.created_at)}`}
                     </p>
                   </div>
                 </div>
