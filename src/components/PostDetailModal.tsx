@@ -8,12 +8,20 @@ import {
 } from 'lucide-react'
 import type { Post, PostComment } from './Wall'
 
+type DMRequestPayload = {
+  userId: string
+  displayName: string
+  sourcePostId?: string | null
+  sourceCommentId?: string | null
+}
+
 type PostDetailModalProps = {
   post: Post | null
   userId: string | null
   commentValue: string
   onClose: () => void
   onOpenProfile: (userId: string) => void
+  onRequestDirectMessage: (payload: DMRequestPayload) => void
   onTogglePostLike: (post: Post) => Promise<void>
   onToggleCommentLike: (comment: PostComment) => Promise<void>
   onCommentChange: (postId: string, value: string) => void
@@ -36,6 +44,7 @@ export default function PostDetailModal({
   commentValue,
   onClose,
   onOpenProfile,
+  onRequestDirectMessage,
   onTogglePostLike,
   onToggleCommentLike,
   onCommentChange,
@@ -187,7 +196,7 @@ export default function PostDetailModal({
             </div>
           )}
 
-          <div className="mt-5 flex items-center gap-4 border-t pt-4 text-sm text-slate-500">
+          <div className="mt-5 flex flex-wrap items-center gap-3 border-t pt-4 text-sm text-slate-500">
             <button
               type="button"
               onClick={() => onTogglePostLike(post)}
@@ -212,10 +221,28 @@ export default function PostDetailModal({
               <button
                 type="button"
                 onClick={() => onOpenProfile(post.user_id)}
-                className="ml-auto flex items-center gap-1 font-semibold text-slate-500"
+                className="flex items-center gap-1 font-semibold text-slate-500"
               >
                 <UserRound size={17} />
                 Perfil
+              </button>
+            )}
+
+            {!post.is_anonymous && post.user_id !== userId && (
+              <button
+                type="button"
+                onClick={() =>
+                  onRequestDirectMessage({
+                    userId: post.user_id,
+                    displayName: post.author_name,
+                    sourcePostId: post.id,
+                    sourceCommentId: null,
+                  })
+                }
+                className="flex items-center gap-1 rounded-xl bg-slate-900 px-3 py-2 text-xs font-bold text-white"
+              >
+                <MessageCircle size={15} />
+                Solicitar DM
               </button>
             )}
           </div>
@@ -248,7 +275,7 @@ export default function PostDetailModal({
                       </p>
                     </button>
 
-                    {comment.user_id !== userId && (
+                    <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => onOpenProfile(comment.user_id)}
@@ -256,7 +283,24 @@ export default function PostDetailModal({
                       >
                         Perfil
                       </button>
-                    )}
+
+                      {comment.user_id !== userId && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onRequestDirectMessage({
+                              userId: comment.user_id,
+                              displayName: comment.author_name,
+                              sourcePostId: post.id,
+                              sourceCommentId: comment.id,
+                            })
+                          }
+                          className="rounded-xl bg-slate-900 px-2 py-1 text-[11px] font-bold text-white"
+                        >
+                          Solicitar DM
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">

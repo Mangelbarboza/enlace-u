@@ -14,11 +14,11 @@ import {
   UserRound,
   X,
 } from 'lucide-react'
-import { useNavigate } from 'react-router'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import ProfileCard from './ProfileCard'
 import PostDetailModal from './PostDetailModal'
+import DirectMessageRequestModal from './DirectMessageRequestModal'
 
 type WallMode = 'general' | 'university'
 
@@ -73,6 +73,13 @@ type WallProps = {
   mode: WallMode
 }
 
+type DMRequestTarget = {
+  userId: string
+  displayName: string
+  sourcePostId?: string | null
+  sourceCommentId?: string | null
+}
+
 const PAGE_SIZE = 15
 
 function formatPostDate(value: string) {
@@ -98,7 +105,7 @@ function normalizeTags(value: string) {
 }
 
 function getCacheKey(mode: WallMode, university: string | null) {
-  return `enlace-u-wall-${mode}-${university || 'all'}-v3`
+  return `enlace-u-wall-${mode}-${university || 'all'}-v4`
 }
 
 function savePostsToCache(key: string, posts: Post[]) {
@@ -111,7 +118,7 @@ function savePostsToCache(key: string, posts: Post[]) {
       }),
     )
   } catch {
-    // Si el navegador bloquea localStorage, simplemente seguimos sin cache.
+    // Cache opcional.
   }
 }
 
@@ -140,7 +147,6 @@ function readPostsFromCache(key: string) {
 
 export default function Wall({ mode }: WallProps) {
   const { user } = useAuth()
-  const navigate = useNavigate()
 
   const displayName = user?.user_metadata?.display_name || 'Estudiante'
   const university = user?.user_metadata?.university || null
@@ -171,6 +177,9 @@ export default function Wall({ mode }: WallProps) {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [detailPost, setDetailPost] = useState<Post | null>(null)
   const [profileCardUserId, setProfileCardUserId] = useState<string | null>(null)
+  const [dmRequestTarget, setDmRequestTarget] = useState<DMRequestTarget | null>(
+    null,
+  )
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({})
 
   const normalizedSearch = tagSearch.trim().toLowerCase().replace('#', '')
@@ -208,6 +217,11 @@ export default function Wall({ mode }: WallProps) {
   function openProfileCard(userId: string) {
     setSelectedPost(null)
     setProfileCardUserId(userId)
+  }
+
+  function openDMRequest(target: DMRequestTarget) {
+    setSelectedPost(null)
+    setDmRequestTarget(target)
   }
 
   async function loadPosts(nextLimit = visibleLimit, showReloadAnimation = false) {
@@ -675,38 +689,6 @@ export default function Wall({ mode }: WallProps) {
 
     setSuccessMessage('Reporte enviado. Gracias por ayudar a cuidar la comunidad.')
     setSelectedPost(null)
-  }
-
-  async function handleStartDirectMessage(post: Post) {
-    if (!user) {
-      setErrorMessage('Necesitás iniciar sesión para enviar mensajes.')
-      return
-    }
-
-    if (post.user_id === user.id) {
-      setErrorMessage('No podés abrir un chat con vos mismo.')
-      setSelectedPost(null)
-      return
-    }
-
-    if (post.is_anonymous) {
-      setErrorMessage('No podés enviar mensaje directo a un post anónimo.')
-      setSelectedPost(null)
-      return
-    }
-
-    const { data, error } = await supabase.rpc('start_direct_conversation', {
-      other_user_id: post.user_id,
-    })
-
-    if (error || !data) {
-      setErrorMessage('No se pudo abrir el chat.')
-      setSelectedPost(null)
-      return
-    }
-
-    setSelectedPost(null)
-    navigate(`/chats?c=${data}`)
   }
 
   function handleAddPollOption() {
@@ -1246,11 +1228,18 @@ export default function Wall({ mode }: WallProps) {
               {!selectedPost.is_anonymous && selectedPost.user_id !== user?.id && (
                 <button
                   type="button"
-                  onClick={() => handleStartDirectMessage(selectedPost)}
+                  onClick={() =>
+                    openDMRequest({
+                      userId: selectedPost.user_id,
+                      displayName: selectedPost.author_name,
+                      sourcePostId: selectedPost.id,
+                      sourceCommentId: null,
+                    })
+                  }
                   className="flex w-full items-center gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white"
                 >
                   <MessageCircle size={18} />
-                  Mensaje directo
+                  Solicitar mensaje
                 </button>
               )}
 
@@ -1281,6 +1270,14 @@ export default function Wall({ mode }: WallProps) {
         commentValue={detailPost ? commentInputs[detailPost.id] ?? '' : ''}
         onClose={() => setDetailPost(null)}
         onOpenProfile={openProfileCard}
+        onRequestDirectMessage={({ userId, displayName, sourcePostId, sourceCommentId }) =>
+          openDMRequest({
+            userId,
+            displayName,
+            sourcePostId,
+            sourceCommentId,
+          })
+        }
         onTogglePostLike={handleTogglePostLike}
         onToggleCommentLike={handleToggleCommentLike}
         onCommentChange={(postId, value) =>
@@ -1297,6 +1294,19 @@ export default function Wall({ mode }: WallProps) {
         userId={profileCardUserId}
         open={Boolean(profileCardUserId)}
         onClose={() => setProfileCardUserId(null)}
+      />
+
+      <DirectMessageRequestModal
+        open={Boolean(dmRequestTarget)}
+        receiverUserId={dmRequestTarget?.userId ?? null}
+        receiverName={dmRequestTarget?.displayName ?? ''}
+        sourcePostId={dmRequestTarget?.sourcePostId ?? null}
+        sourceCommentId={dmRequestTarget?.sourceCommentId ?? null}
+        onClose={() => setDmRequestTarget(null)}
+        onSuccess={() => {
+          setSuccessMessage('Solicitud enviada correctamente.')
+          setDmRequestTarget(null)
+        }}
       />
     </main>
   )
