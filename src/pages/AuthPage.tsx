@@ -3,7 +3,12 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { COSTA_RICA_PROVINCES, UNIVERSITIES } from '../lib/constants'
+import {
+  COSTA_RICA_PROVINCES,
+  UNIVERSITIES,
+  USER_TYPES,
+  type UserType,
+} from '../lib/constants'
 
 type AuthMode = 'login' | 'register'
 
@@ -16,6 +21,13 @@ function getFriendlyAuthError(message: string) {
 
   if (cleanMessage.includes('invalid login credentials')) {
     return 'Correo o contraseña incorrectos.'
+  }
+
+  if (
+    cleanMessage.includes('email not confirmed') ||
+    cleanMessage.includes('email_not_confirmed')
+  ) {
+    return 'Tenés que confirmar tu correo antes de iniciar sesión.'
   }
 
   if (cleanMessage.includes('password')) {
@@ -37,11 +49,13 @@ export default function AuthPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
+  const [userType, setUserType] = useState<UserType>('student')
   const [university, setUniversity] = useState('')
   const [province, setProvince] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
   const [loading, setLoading] = useState(false)
+  const [resetLoading, setResetLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
 
@@ -54,6 +68,7 @@ export default function AuthPage() {
 
   function validateForm() {
     const normalizedEmail = email.trim().toLowerCase()
+    const cleanDisplayName = displayName.trim()
 
     if (!normalizedEmail) {
       return 'Escribí tu correo.'
@@ -72,12 +87,20 @@ export default function AuthPage() {
     }
 
     if (isRegister) {
-      if (!displayName.trim()) {
+      if (!cleanDisplayName) {
         return 'Escribí tu nombre visible.'
       }
 
+      if (cleanDisplayName.length > 20) {
+        return 'El nombre visible no puede pasar de 20 caracteres.'
+      }
+
+      if (!userType) {
+        return 'Seleccioná si sos estudiante o funcionario.'
+      }
+
       if (!university) {
-        return 'Seleccioná tu universidad.'
+        return 'Seleccioná tu institución.'
       }
 
       if (!province) {
@@ -114,9 +137,11 @@ export default function AuthPage() {
         options: {
           data: {
             display_name: displayName.trim(),
+            user_type: userType,
             university,
             province,
           },
+          emailRedirectTo: `${window.location.origin}/auth`,
         },
       })
 
@@ -129,7 +154,7 @@ export default function AuthPage() {
 
       if (!data.session) {
         setSuccessMessage(
-          'Cuenta creada. Revisá tu correo para confirmar la cuenta antes de iniciar sesión.'
+          'Cuenta creada. Revisá tu correo y confirmá la cuenta antes de iniciar sesión.',
         )
         return
       }
@@ -151,6 +176,32 @@ export default function AuthPage() {
     }
 
     navigate('/', { replace: true })
+  }
+
+  async function handlePasswordReset() {
+    resetMessages()
+
+    const normalizedEmail = email.trim().toLowerCase()
+
+    if (!normalizedEmail || !normalizedEmail.includes('@')) {
+      setErrorMessage('Escribí tu correo para enviarte la recuperación.')
+      return
+    }
+
+    setResetLoading(true)
+
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+      redirectTo: `${window.location.origin}/auth`,
+    })
+
+    setResetLoading(false)
+
+    if (error) {
+      setErrorMessage(getFriendlyAuthError(error.message))
+      return
+    }
+
+    setSuccessMessage('Te enviamos un correo para recuperar tu contraseña.')
   }
 
   function changeMode(nextMode: AuthMode) {
@@ -211,29 +262,62 @@ export default function AuthPage() {
                 </label>
                 <input
                   value={displayName}
+                  maxLength={20}
                   onChange={(event) => setDisplayName(event.target.value)}
                   className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-500"
-                  placeholder="Ej: Ángel"
+                  placeholder="Máximo 20 caracteres"
                   autoComplete="name"
                 />
+                <p className="mt-1 text-right text-xs text-slate-400">
+                  {displayName.length}/20
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Tipo de usuario
+                </label>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {USER_TYPES.map((item) => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => setUserType(item.value)}
+                      className={[
+                        'rounded-2xl border px-4 py-3 text-sm font-bold',
+                        userType === item.value
+                          ? 'border-slate-900 bg-slate-900 text-white'
+                          : 'border-slate-200 bg-white text-slate-600',
+                      ].join(' ')}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Universidad
+                  Institución
                 </label>
                 <select
                   value={university}
                   onChange={(event) => setUniversity(event.target.value)}
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500"
                 >
-                  <option value="">Seleccionar universidad</option>
+                  <option value="">Seleccionar institución</option>
                   {UNIVERSITIES.map((item) => (
                     <option key={item} value={item}>
                       {item}
                     </option>
                   ))}
                 </select>
+
+                <p className="mt-2 rounded-2xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-700">
+                  Importante: no podrás cambiar tu institución durante 90 días
+                  después del registro.
+                </p>
               </div>
 
               <div>
@@ -268,6 +352,13 @@ export default function AuthPage() {
               placeholder="tu_correo@ejemplo.com"
               autoComplete="email"
             />
+
+            {isRegister && (
+              <p className="mt-1 text-xs leading-5 text-slate-400">
+                Te enviaremos un correo de confirmación para verificar que el
+                correo existe y te pertenece.
+              </p>
+            )}
           </div>
 
           <div>
@@ -310,6 +401,17 @@ export default function AuthPage() {
                 autoComplete="new-password"
               />
             </div>
+          )}
+
+          {!isRegister && (
+            <button
+              type="button"
+              onClick={handlePasswordReset}
+              disabled={resetLoading}
+              className="text-sm font-semibold text-slate-500 hover:text-slate-900 disabled:opacity-60"
+            >
+              {resetLoading ? 'Enviando correo...' : 'Olvidé mi contraseña'}
+            </button>
           )}
 
           {errorMessage && (
