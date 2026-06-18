@@ -205,18 +205,6 @@ export default function Wall({ mode }: WallProps) {
     setIsComposerOpen(false)
   }
 
-  function updatePostInState(updatedPost: Post) {
-    setPosts((currentPosts) =>
-      currentPosts.map((post) =>
-        post.id === updatedPost.id ? updatedPost : post,
-      ),
-    )
-
-    setDetailPost((currentPost) =>
-      currentPost?.id === updatedPost.id ? updatedPost : currentPost,
-    )
-  }
-
   function openProfileCard(userId: string) {
     setSelectedPost(null)
     setProfileCardUserId(userId)
