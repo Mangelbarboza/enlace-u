@@ -3,10 +3,9 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { COSTA_RICA_PROVINCES, UNIVERSITIES } from '../lib/constants'
 
 type AuthMode = 'login' | 'register'
-
-const universities = ['UCR', 'TEC', 'UNA', 'UNED', 'UTN']
 
 function getFriendlyAuthError(message: string) {
   const cleanMessage = message.toLowerCase()
@@ -39,7 +38,7 @@ export default function AuthPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [university, setUniversity] = useState('')
-  const [campus, setCampus] = useState('')
+  const [province, setProvince] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
   const [loading, setLoading] = useState(false)
@@ -81,8 +80,8 @@ export default function AuthPage() {
         return 'Seleccioná tu universidad.'
       }
 
-      if (!campus.trim()) {
-        return 'Escribí tu recinto o sede.'
+      if (!province) {
+        return 'Seleccioná la provincia donde está tu sede.'
       }
 
       if (password !== confirmPassword) {
@@ -116,7 +115,7 @@ export default function AuthPage() {
           data: {
             display_name: displayName.trim(),
             university,
-            campus: campus.trim(),
+            province,
           },
         },
       })
@@ -215,6 +214,7 @@ export default function AuthPage() {
                   onChange={(event) => setDisplayName(event.target.value)}
                   className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-500"
                   placeholder="Ej: Ángel"
+                  autoComplete="name"
                 />
               </div>
 
@@ -228,7 +228,7 @@ export default function AuthPage() {
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500"
                 >
                   <option value="">Seleccionar universidad</option>
-                  {universities.map((item) => (
+                  {UNIVERSITIES.map((item) => (
                     <option key={item} value={item}>
                       {item}
                     </option>
@@ -238,14 +238,20 @@ export default function AuthPage() {
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Recinto o sede
+                  Provincia de la sede
                 </label>
-                <input
-                  value={campus}
-                  onChange={(event) => setCampus(event.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-500"
-                  placeholder="Ej: Guápiles"
-                />
+                <select
+                  value={province}
+                  onChange={(event) => setProvince(event.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500"
+                >
+                  <option value="">Seleccionar provincia</option>
+                  {COSTA_RICA_PROVINCES.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
               </div>
             </>
           )}

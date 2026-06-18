@@ -1,4 +1,5 @@
 import { registerServiceWorker } from './lib/registerServiceWorker'
+import { enableAppLikeMode } from './lib/appLikemode'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router'
@@ -17,3 +18,4 @@ createRoot(document.getElementById('root')!).render(
 )
 
 registerServiceWorker()
+enableAppLikeMode()

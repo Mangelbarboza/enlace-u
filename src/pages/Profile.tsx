@@ -5,13 +5,13 @@ export default function Profile() {
 
   const displayName = user?.user_metadata?.display_name
   const university = user?.user_metadata?.university
-  const campus = user?.user_metadata?.campus
+  const province = user?.user_metadata?.province || user?.user_metadata?.campus
 
   return (
     <main>
       <h1 className="text-2xl font-black text-slate-900">Perfil</h1>
       <p className="mt-1 text-sm text-slate-500">
-        Perfil, universidad, recinto y ajustes generales.
+        Perfil, universidad, provincia y ajustes generales.
       </p>
 
       <section className="mt-5 rounded-3xl border bg-white p-5 shadow-sm">
@@ -30,8 +30,8 @@ export default function Profile() {
             {university || 'Sin universidad'}
           </p>
           <p>
-            <span className="font-semibold">Recinto:</span>{' '}
-            {campus || 'Sin recinto'}
+            <span className="font-semibold">Provincia:</span>{' '}
+            {province || 'Sin provincia'}
           </p>
         </div>
 
