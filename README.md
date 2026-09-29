@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎓 Enlace U
+# Enlace U
 
 **Red social comunitaria, foro interuniversitario y marketplace estudiantil para las universidades públicas de Costa Rica.**
 
@@ -13,15 +13,15 @@
 [![PWA Ready](https://img.shields.io/badge/PWA-Standalone_Ready-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)](https://enlaceu.online/auth)
 
 <p align="center">
-  <a href="https://enlaceu.online/auth"><strong>🌐 Ver Aplicación en Producción (enlaceu.online)</strong></a> ·
-  <a href="./docs/ARCHITECTURE.md"><strong>📐 Arquitectura y Base de Datos</strong></a>
+  <a href="https://enlaceu.online/auth"><strong>Ver Aplicación en Producción (enlaceu.online)</strong></a> ·
+  <a href="./docs/ARCHITECTURE.md"><strong>Arquitectura y Base de Datos</strong></a>
 </p>
 
 </div>
 
 ---
 
-## 📌 Descripción del Proyecto
+## Descripción del Proyecto
 
 **Enlace U** es una plataforma web **Mobile-First & Progressive Web App (PWA)** diseñada para conectar a estudiantes y funcionarios de las instituciones de educación superior pública de Costa Rica (**UCR, TEC, UNA, UNED, UTN e INA**) a lo largo de las 7 provincias del país.
 
@@ -32,7 +32,7 @@ El proyecto centraliza en una sola experiencia instalable tres necesidades reale
 
 ---
 
-## 📱 Capturas de Pantalla (Producción Mobile-First)
+## Capturas de Pantalla (Producción Mobile-First)
 
 | Arranque PWA | Muro & Encuestas | Marketplace Estudiantil | Chats & Solicitudes | Perfil & Privacidad |
 | :---: | :---: | :---: | :---: | :---: |
@@ -41,28 +41,28 @@ El proyecto centraliza en una sola experiencia instalable tres necesidades reale
 
 ---
 
-## 🚀 Aspectos Técnicos Destacados (Engineering Highlights)
+## Aspectos Técnicos Destacados (Engineering Highlights)
 
 Este proyecto fue construido priorizando **seguridad en el backend, rendimiento de consultas y experiencia de usuario móvil**:
 
-- 🔒 **Privacidad Opt-In Gobernada por el Servidor (PostgreSQL RPCs):**
+- **Privacidad Opt-In Gobernada por el Servidor (PostgreSQL RPCs):**
   Los usuarios deciden mediante interruptores independientes si desean mostrar su biografía (`show_bio`), su carrera/cargo (`show_academic_info`) o sus redes de contacto (`show_contact_info`: WhatsApp, Instagram, TikTok). En lugar de filtrar estos datos en el cliente, la carta pública de perfil ([`ProfileCard.tsx`](./src/components/ProfileCard.tsx)) consume el procedimiento almacenado `get_public_profile_card`, garantizando que los datos privados nunca viajen por la red.
-- 🛡️ **Flujo de Mensajería Anti-Spam y Trazabilidad:**
+- **Flujo de Mensajería Anti-Spam y Trazabilidad:**
   Nadie puede enviar mensajes directos no solicitados. Para iniciar un chat desde un post o comentario ([`DirectMessageRequestModal.tsx`](./src/components/DirectMessageRequestModal.tsx)), el remitente envía una solicitud con asunto (`create_direct_message_request`) que registra el origen (`source_post_id` / `source_comment_id`). Solo cuando el receptor acepta (`respond_direct_message_request`), el backend aprovisiona la sala de chat 1-a-1.
-- 🛒 **Marketplace con Cooldown Transaccional de 12 Horas:**
+- **Marketplace con Cooldown Transaccional de 12 Horas:**
   Al tocar *"Me interesa"* en un artículo o servicio ([`Marketplace.tsx`](./src/pages/Marketplace.tsx)), la función RPC `marketplace_start_purchase_chat` registra la intención de compra (`marketplace_purchase_intents`), abre o reutiliza la conversación con el vendedor, envía el mensaje automático de interés y aplica un **bloqueo de 12 horas por artículo** para evitar spam repetitivo al vendedor.
-- ⚡ **Hidratación Paralela (`Promise.all`) y Caché por Alcance:**
+- **Hidratación Paralela (`Promise.all`) y Caché por Alcance:**
   El motor de muros ([`Wall.tsx`](./src/components/Wall.tsx)) evita el problema de consultas $N+1$ hidratando en paralelo likes, comentarios, encuestas, opciones y votos sobre lotes paginados (`PAGE_SIZE = 15`), manteniendo además una caché en memoria diferenciada entre el muro general y el muro universitario para navegación instantánea entre pestañas.
-- 🕵️ **Modo Anónimo con Moderación Activa e Integridad Institucional:**
+- **Modo Anónimo con Moderación Activa e Integridad Institucional:**
   Permite crear publicaciones anónimas en los muros ocultando la identidad y bloqueando la apertura de perfil en la UI, pero preservando las reglas de moderación (`post_reports`) y borrado por autoría. Además, implementa bloqueo temporal de cambio de universidad (`university_locked_until`) para proteger la privacidad del **Muro U** de cada institución.
-- 📲 **Arquitectura PWA Nativa:**
+- **Arquitectura PWA Nativa:**
   Incluye Web App Manifest ([`manifest.webmanifest`](./public/manifest.webmanifest)), Service Worker propio ([`sw.js`](./public/sw.js)) con caché de *App Shell* y fallback offline para rutas SPA, y modo inmersivo ([`appLikemode.ts`](./src/lib/appLikemode.ts)).
 
 ---
 
-## 🏗️ Arquitectura del Sistema
+## Arquitectura del Sistema
 
-> 📄 **Documentación completa:** Para ver el **Diagrama Entidad-Relación (15 tablas)**, el catálogo detallado de las **6 funciones RPC de PostgreSQL** y las decisiones de diseño (ADRs), consultá [**`docs/ARCHITECTURE.md`**](./docs/ARCHITECTURE.md).
+> **Documentación completa:** Para ver el **Diagrama Entidad-Relación (15 tablas)**, el catálogo detallado de las **6 funciones RPC de PostgreSQL** y las decisiones de diseño (ADRs), consultá [**`docs/ARCHITECTURE.md`**](./docs/ARCHITECTURE.md).
 
 ```mermaid
 flowchart LR
@@ -92,7 +92,7 @@ flowchart LR
 
 ---
 
-## 🛠️ Stack Tecnológico
+## Stack Tecnológico
 
 | Categoría | Tecnologías Implementadas |
 | :--- | :--- |
@@ -106,7 +106,7 @@ flowchart LR
 
 ---
 
-## 📂 Estructura del Proyecto
+## Estructura del Proyecto
 
 ```text
 enlace-u/
@@ -151,7 +151,7 @@ enlace-u/
 
 ---
 
-## ⚙️ Instalación y Ejecución Local
+## Instalación y Ejecución Local
 
 ### 1. Prerrequisitos
 - **Node.js** `v20+` (recomendado `v22 LTS`) y **npm**.
@@ -195,7 +195,7 @@ npm run preview
 
 ---
 
-## 👨‍💻 Autor
+## Autor
 
 Desarrollado por **Angel Barboza Reyes**
 - **GitHub:** [@Mangelbarboza](https://github.com/Mangelbarboza)
